@@ -32,6 +32,15 @@ public class PayrollController {
         return payrollService.findArchives();
     }
 
+    @GetMapping("/preview")
+    public List<PayrollPreviewItemDto> preview(
+            @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE)
+            java.time.LocalDate periodStart,
+            @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE)
+            java.time.LocalDate periodEnd) {
+        return payrollService.preview(periodStart, periodEnd);
+    }
+
     @GetMapping("/archives/{id}")
     public PayrollArchiveDto findArchive(@PathVariable Long id) {
         return payrollService.findArchiveById(id);

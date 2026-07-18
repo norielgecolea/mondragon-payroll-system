@@ -1,7 +1,7 @@
 <div class="page-header no-print">
   <div>
     <h1>Payroll</h1>
-    <p>Generate, review, finalize, print, and archive payroll runs. Regular hours follow schedule limits (no early-in / late-out) minus 1hr unpaid lunch; only approved OT is paid.</p>
+    <p>Generate, review, finalize, print, and archive payroll runs. Full schedule days use the daily rate; incomplete days are paid hourly. Regular hours follow schedule limits (no early-in / late-out) minus 1hr unpaid lunch; only approved OT is paid.</p>
   </div>
   <button class="btn btn-primary" type="button" (click)="openGenerate()">Generate Payroll</button>
 </div>
@@ -116,13 +116,20 @@
       <h2>Generate Payroll</h2>
 
       <div class="period-row">
-        <label class="field">Period Start<input type="date" [(ngModel)]="periodStart" /></label>
-        <label class="field">Period End<input type="date" [(ngModel)]="periodEnd" /></label>
+        <label class="field">Period Start
+          <input type="date" [(ngModel)]="periodStart" (ngModelChange)="onPeriodChange()" />
+        </label>
+        <label class="field">Period End
+          <input type="date" [(ngModel)]="periodEnd" (ngModelChange)="onPeriodChange()" />
+        </label>
       </div>
       <label class="field">Remarks<textarea [(ngModel)]="remarks" rows="2"></textarea></label>
 
-      <h3 class="section-title">Per-employee bonus &amp; deductions</h3>
-      <p class="section-hint">Leave amounts blank or unchecked to skip. Net pay cannot go below zero.</p>
+      <h3 class="section-title">Per-employee earnings, bonus &amp; deductions</h3>
+      <p class="section-hint">
+        Basic salary is computed from DTR for this period (full day = daily rate, incomplete = hourly).
+        @if (previewLoading) { Loading preview… }
+      </p>
 
       <div class="employee-deduction-list">
         @for (e of employees; track e.id) {
@@ -131,6 +138,31 @@
               <strong>{{ e.fullName }}</strong>
               <span>{{ e.employeeCode }}</span>
             </div>
+
+            @if (e.preview; as prev) {
+              <div class="earnings-preview">
+                <div>
+                  <span>Days</span>
+                  <strong>{{ prev.daysWorked }}</strong>
+                </div>
+                <div>
+                  <span>Hours</span>
+                  <strong>{{ prev.hoursWorked }}</strong>
+                </div>
+                <div>
+                  <span>Basic salary</span>
+                  <strong class="money">{{ prev.basicPay | currency:'PHP':'symbol-narrow':'1.2-2' }}</strong>
+                </div>
+                <div>
+                  <span>OT pay</span>
+                  <strong class="money">{{ prev.overtimePay | currency:'PHP':'symbol-narrow':'1.2-2' }}</strong>
+                </div>
+              </div>
+            } @else if (previewLoading) {
+              <div class="earnings-preview empty-preview">Loading preview…</div>
+            } @else {
+              <div class="earnings-preview empty-preview">No DTR earnings for this period</div>
+            }
 
             <div class="deduction-grid">
               <label class="field">

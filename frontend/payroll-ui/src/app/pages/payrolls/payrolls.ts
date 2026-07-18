@@ -1,8 +1,8 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { AsyncPipe, CurrencyPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-import { BehaviorSubject } from 'rxjs';
+import { BehaviorSubject, forkJoin } from 'rxjs';
 import { ApiService } from '../../core/services/api.service';
 import { ListLoader } from '../../core/services/list-loader';
 
@@ -16,10 +16,12 @@ import { ListLoader } from '../../core/services/list-loader';
 export class PayrollsComponent implements OnInit {
   readonly list = inject(ListLoader);
   private readonly api = inject(ApiService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   readonly selected$ = new BehaviorSubject<any | null>(null);
   employees: any[] = [];
   advances: any[] = [];
+  previewLoading = false;
   showGenerate = false;
   periodStart = '';
   periodEnd = '';
@@ -49,11 +51,29 @@ export class PayrollsComponent implements OnInit {
   }
 
   openGenerate(): void {
-    this.api.getList<any>('/employees/active').subscribe({
-      next: (emps) => {
-        this.employees = emps;
+    if (!this.periodStart || !this.periodEnd) {
+      alert('Set period start and end first');
+      return;
+    }
+    this.previewLoading = true;
+    this.api.refreshUi();
+
+    forkJoin({
+      emps: this.api.getList<any>('/employees/active'),
+      advances: this.api.getList<any>('/cash-advances'),
+      preview: this.api.getList<any>('/payrolls/preview', {
+        periodStart: this.periodStart,
+        periodEnd: this.periodEnd
+      })
+    }).subscribe({
+      next: ({ emps, advances, preview }) => {
+        const previewMap: Record<number, any> = {};
+        preview.forEach((row) => {
+          previewMap[row.employeeId] = row;
+        });
+
         this.deductions = {};
-        emps.forEach((e) => {
+        this.employees = emps.map((e) => {
           this.deductions[e.id] = {
             bonusAmount: null,
             deductCashAdvance: false,
@@ -65,15 +85,55 @@ export class PayrollsComponent implements OnInit {
             deductPhilhealth: false,
             philhealthAmount: null
           };
+          return { ...e, preview: previewMap[e.id] ?? null };
         });
+        this.advances = advances.filter((a) => a.status === 'ACTIVE');
+        this.previewLoading = false;
         this.showGenerate = true;
+        this.cdr.detectChanges();
         this.api.refreshUi();
       },
-      error: (err) => alert(err?.error?.message || 'Failed to load employees')
+      error: (err) => {
+        this.previewLoading = false;
+        this.cdr.detectChanges();
+        alert(err?.error?.message || 'Failed to open generate payroll');
+        this.api.refreshUi();
+      }
     });
-    this.api.getList<any>('/cash-advances').subscribe({
-      next: (d) => {
-        this.advances = d.filter((a) => a.status === 'ACTIVE');
+  }
+
+  onPeriodChange(): void {
+    if (this.showGenerate) {
+      this.loadPreview();
+    }
+  }
+
+  loadPreview(): void {
+    if (!this.periodStart || !this.periodEnd) return;
+    this.previewLoading = true;
+    this.cdr.detectChanges();
+    this.api.getList<any>('/payrolls/preview', {
+      periodStart: this.periodStart,
+      periodEnd: this.periodEnd
+    }).subscribe({
+      next: (rows) => {
+        const previewMap: Record<number, any> = {};
+        rows.forEach((row) => {
+          previewMap[row.employeeId] = row;
+        });
+        this.employees = this.employees.map((e) => ({
+          ...e,
+          preview: previewMap[e.id] ?? null
+        }));
+        this.previewLoading = false;
+        this.cdr.detectChanges();
+        this.api.refreshUi();
+      },
+      error: (err) => {
+        this.previewLoading = false;
+        this.employees = this.employees.map((e) => ({ ...e, preview: null }));
+        this.cdr.detectChanges();
+        alert(err?.error?.message || 'Failed to load salary preview');
         this.api.refreshUi();
       }
     });

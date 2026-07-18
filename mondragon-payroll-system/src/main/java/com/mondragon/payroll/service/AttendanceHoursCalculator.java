@@ -23,6 +23,7 @@ import java.util.Optional;
  * - Early time-in does not count (clipped to schedule time-in)
  * - Late time-out does not count (clipped to schedule time-out); OT is only via approved OT records
  * - 1 hour unpaid lunch break is deducted
+ * - Full schedule day → daily rate; incomplete day → hourly rate × payable hours
  */
 @Service
 @RequiredArgsConstructor
@@ -34,21 +35,7 @@ public class AttendanceHoursCalculator {
 
     @Transactional(readOnly = true)
     public BigDecimal calculatePayableHours(Long employeeId, LocalDate workDate, LocalTime timeIn, LocalTime timeOut) {
-        Employee employee = employeeRepository.findById(employeeId).orElse(null);
-        if (employee == null) {
-            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-        }
-
-        ScheduleClass scheduleClass = employee.getScheduleClass();
-        if (scheduleClass == null || !Boolean.TRUE.equals(scheduleClass.getActive())) {
-            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
-        }
-
-        int dayOfWeek = workDate.getDayOfWeek().getValue();
-        Optional<ScheduleClassDay> dayOpt = scheduleClass.getDays().stream()
-                .filter(d -> dayOfWeek == d.getDayOfWeek())
-                .findFirst();
-
+        Optional<ScheduleClassDay> dayOpt = findScheduleDay(employeeId, workDate);
         if (dayOpt.isEmpty()) {
             return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         }
@@ -68,12 +55,34 @@ public class AttendanceHoursCalculator {
             return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
         }
 
-        long minutes = Duration.between(effectiveIn, effectiveOut).toMinutes();
-        BigDecimal rawHours = BigDecimal.valueOf(minutes)
-                .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
+        return toPayableHours(effectiveIn, effectiveOut);
+    }
 
-        return rawHours.subtract(UNPAID_LUNCH_HOURS).max(BigDecimal.ZERO)
-                .setScale(2, RoundingMode.HALF_UP);
+    /**
+     * Scheduled payable hours for the weekday (schedule span minus unpaid lunch).
+     * Returns 0 when there is no active schedule day.
+     */
+    @Transactional(readOnly = true)
+    public BigDecimal calculateScheduledPayableHours(Long employeeId, LocalDate workDate) {
+        Optional<ScheduleClassDay> dayOpt = findScheduleDay(employeeId, workDate);
+        if (dayOpt.isEmpty()) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+        ScheduleClassDay day = dayOpt.get();
+        if (!day.getTimeOut().isAfter(day.getTimeIn())) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+        return toPayableHours(day.getTimeIn(), day.getTimeOut());
+    }
+
+    /** True when payable hours cover the full scheduled day. */
+    @Transactional(readOnly = true)
+    public boolean completedFullSchedule(DtrRecord dtr) {
+        BigDecimal payable = calculatePayableHours(dtr);
+        BigDecimal scheduled = calculateScheduledPayableHours(
+                dtr.getEmployee().getId(), dtr.getWorkDate());
+        return scheduled.compareTo(BigDecimal.ZERO) > 0
+                && payable.compareTo(scheduled) >= 0;
     }
 
     @Transactional(readOnly = true)
@@ -83,5 +92,30 @@ public class AttendanceHoursCalculator {
                 dtr.getWorkDate(),
                 dtr.getTimeIn(),
                 dtr.getTimeOut());
+    }
+
+    private Optional<ScheduleClassDay> findScheduleDay(Long employeeId, LocalDate workDate) {
+        Employee employee = employeeRepository.findById(employeeId).orElse(null);
+        if (employee == null) {
+            return Optional.empty();
+        }
+
+        ScheduleClass scheduleClass = employee.getScheduleClass();
+        if (scheduleClass == null || !Boolean.TRUE.equals(scheduleClass.getActive())) {
+            return Optional.empty();
+        }
+
+        int dayOfWeek = workDate.getDayOfWeek().getValue();
+        return scheduleClass.getDays().stream()
+                .filter(d -> dayOfWeek == d.getDayOfWeek())
+                .findFirst();
+    }
+
+    private static BigDecimal toPayableHours(LocalTime start, LocalTime end) {
+        long minutes = Duration.between(start, end).toMinutes();
+        BigDecimal rawHours = BigDecimal.valueOf(minutes)
+                .divide(BigDecimal.valueOf(60), 2, RoundingMode.HALF_UP);
+        return rawHours.subtract(UNPAID_LUNCH_HOURS).max(BigDecimal.ZERO)
+                .setScale(2, RoundingMode.HALF_UP);
     }
 }

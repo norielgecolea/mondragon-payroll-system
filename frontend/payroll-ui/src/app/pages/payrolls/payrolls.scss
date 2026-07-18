@@ -96,6 +96,38 @@
   font-size: 0.8rem;
 }
 
+.earnings-preview {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 0.85rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid var(--line);
+}
+
+.earnings-preview > div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.earnings-preview span {
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.earnings-preview strong {
+  font-size: 0.92rem;
+}
+
+.earnings-preview.empty-preview {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
 .deduction-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -140,14 +172,16 @@
 }
 
 @media (max-width: 900px) {
-  .employee-deduction-list {
-    grid-template-columns: 1fr;
+  .employee-deduction-list,
+  .earnings-preview {
+    grid-template-columns: 1fr 1fr;
   }
 }
 
 @media (max-width: 640px) {
   .period-row,
-  .deduction-grid {
+  .deduction-grid,
+  .earnings-preview {
     grid-template-columns: 1fr;
   }
 }

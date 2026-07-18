@@ -14,8 +14,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -48,6 +50,39 @@ public class PayrollService {
         return toDto(getEntity(id), true);
     }
 
+    @Transactional(readOnly = true)
+    public List<PayrollPreviewItemDto> preview(LocalDate periodStart, LocalDate periodEnd) {
+        if (periodStart == null || periodEnd == null) {
+            throw new BusinessException("Period start and end are required");
+        }
+        if (periodEnd.isBefore(periodStart)) {
+            throw new BusinessException("Period end must be on or after period start");
+        }
+
+        List<PayrollPreviewItemDto> items = new ArrayList<>();
+        for (Employee employee : employeeRepository.findByActiveTrueOrderByLastNameAsc()) {
+            EmployeeEarnings earnings = computeEarnings(employee, periodStart, periodEnd);
+            BigDecimal availableCa = cashAdvanceRepository
+                    .findFirstByEmployeeIdAndStatusOrderByAdvanceDateAsc(employee.getId(), CashAdvanceStatus.ACTIVE)
+                    .map(CashAdvance::getRemainingBalance)
+                    .orElse(BigDecimal.ZERO);
+            items.add(PayrollPreviewItemDto.builder()
+                    .employeeId(employee.getId())
+                    .employeeCode(employee.getEmployeeCode())
+                    .employeeName(employee.getFullName())
+                    .daysWorked(earnings.daysWorked())
+                    .hoursWorked(earnings.hoursWorked())
+                    .dailyRate(earnings.dailyRate())
+                    .hourlyRate(earnings.hourlyRate())
+                    .basicPay(earnings.basicPay())
+                    .otHours(earnings.otHours())
+                    .overtimePay(earnings.overtimePay())
+                    .availableCashAdvance(availableCa)
+                    .build());
+        }
+        return items;
+    }
+
     @Transactional
     public PayrollDto generate(GeneratePayrollRequest request) {
         if (request.getPeriodEnd().isBefore(request.getPeriodStart())) {
@@ -76,37 +111,15 @@ public class PayrollService {
 
         List<Employee> employees = employeeRepository.findByActiveTrueOrderByLastNameAsc();
         for (Employee employee : employees) {
-            List<DtrRecord> dtrs = dtrRecordRepository
-                    .findByEmployeeIdAndWorkDateBetweenOrderByWorkDateAsc(
-                            employee.getId(), request.getPeriodStart(), request.getPeriodEnd());
-
-            // Payable regular hours: clipped to schedule, early-in/late-out ignored, 1hr unpaid lunch
-            BigDecimal hoursWorked = BigDecimal.ZERO;
-            BigDecimal daysWorked = BigDecimal.ZERO;
-            for (DtrRecord dtr : dtrs) {
-                BigDecimal payable = attendanceHoursCalculator.calculatePayableHours(dtr);
-                hoursWorked = hoursWorked.add(payable);
-                if (payable.compareTo(BigDecimal.ZERO) > 0) {
-                    daysWorked = daysWorked.add(BigDecimal.ONE);
-                }
-            }
-            hoursWorked = hoursWorked.setScale(2, RoundingMode.HALF_UP);
-
-            // Basic pay: payable days × daily rate
-            BigDecimal dailyRate = employee.getSalaryRate().getDailyRate();
-            BigDecimal overtimeRate = employee.getSalaryRate().getOvertimeRate();
-            BigDecimal basicPay = daysWorked.multiply(dailyRate)
-                    .setScale(2, RoundingMode.HALF_UP);
-
-            // Only APPROVED overtime is paid (late out alone is not OT)
-            List<OvertimeRecord> ots = overtimeRecordRepository
-                    .findByEmployeeIdAndOtDateBetweenAndApprovedTrue(
-                            employee.getId(), request.getPeriodStart(), request.getPeriodEnd());
-            BigDecimal otHours = ots.stream()
-                    .map(OvertimeRecord::getHours)
-                    .reduce(BigDecimal.ZERO, BigDecimal::add);
-            BigDecimal overtimePay = otHours.multiply(overtimeRate)
-                    .setScale(2, RoundingMode.HALF_UP);
+            EmployeeEarnings earnings = computeEarnings(
+                    employee, request.getPeriodStart(), request.getPeriodEnd());
+            BigDecimal daysWorked = earnings.daysWorked();
+            BigDecimal hoursWorked = earnings.hoursWorked();
+            BigDecimal dailyRate = earnings.dailyRate();
+            BigDecimal overtimeRate = earnings.overtimeRate();
+            BigDecimal basicPay = earnings.basicPay();
+            BigDecimal otHours = earnings.otHours();
+            BigDecimal overtimePay = earnings.overtimePay();
 
             GeneratePayrollRequest.EmployeeDeductionOption opt = deductionMap.get(employee.getId());
             boolean deductCa = opt != null && Boolean.TRUE.equals(opt.getDeductCashAdvance());
@@ -220,6 +233,64 @@ public class PayrollService {
 
         return toDto(payrollRepository.save(payroll), true);
     }
+
+    private EmployeeEarnings computeEarnings(Employee employee, LocalDate periodStart, LocalDate periodEnd) {
+        List<DtrRecord> dtrs = dtrRecordRepository
+                .findByEmployeeIdAndWorkDateBetweenOrderByWorkDateAsc(
+                        employee.getId(), periodStart, periodEnd);
+
+        BigDecimal hoursWorked = BigDecimal.ZERO;
+        BigDecimal daysWorked = BigDecimal.ZERO;
+        BigDecimal dailyRate = employee.getSalaryRate().getDailyRate();
+        BigDecimal hourlyRate = employee.getSalaryRate().getHourlyRate();
+        BigDecimal overtimeRate = employee.getSalaryRate().getOvertimeRate();
+        BigDecimal basicPay = BigDecimal.ZERO;
+
+        for (DtrRecord dtr : dtrs) {
+            BigDecimal payable = attendanceHoursCalculator.calculatePayableHours(dtr);
+            if (payable.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+            hoursWorked = hoursWorked.add(payable);
+            daysWorked = daysWorked.add(BigDecimal.ONE);
+
+            if (attendanceHoursCalculator.completedFullSchedule(dtr)) {
+                basicPay = basicPay.add(dailyRate);
+            } else {
+                basicPay = basicPay.add(payable.multiply(hourlyRate));
+            }
+        }
+
+        List<OvertimeRecord> ots = overtimeRecordRepository
+                .findByEmployeeIdAndOtDateBetweenAndApprovedTrue(
+                        employee.getId(), periodStart, periodEnd);
+        BigDecimal otHours = ots.stream()
+                .map(OvertimeRecord::getHours)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal overtimePay = otHours.multiply(overtimeRate)
+                .setScale(2, RoundingMode.HALF_UP);
+
+        return new EmployeeEarnings(
+                daysWorked,
+                hoursWorked.setScale(2, RoundingMode.HALF_UP),
+                dailyRate,
+                hourlyRate,
+                overtimeRate,
+                basicPay.setScale(2, RoundingMode.HALF_UP),
+                otHours,
+                overtimePay);
+    }
+
+    private record EmployeeEarnings(
+            BigDecimal daysWorked,
+            BigDecimal hoursWorked,
+            BigDecimal dailyRate,
+            BigDecimal hourlyRate,
+            BigDecimal overtimeRate,
+            BigDecimal basicPay,
+            BigDecimal otHours,
+            BigDecimal overtimePay
+    ) {}
 
     @Transactional
     public PayrollDto finalizePayroll(Long id) {
