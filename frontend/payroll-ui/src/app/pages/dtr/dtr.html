@@ -1,0 +1,67 @@
+<div class="page-header">
+  <div>
+    <h1>Daily Time Record</h1>
+    <p>Hours follow the employee’s assigned schedule class. No class / no day for that weekday means hours are ignored. Early time-in and late time-out do not count; late out is paid only via approved OT. A 1-hour unpaid lunch is deducted.</p>
+  </div>
+  <button class="btn btn-primary" type="button" (click)="openCreate()">Encode DTR</button>
+</div>
+
+@if (list.error$ | async; as err) {
+  @if (err) {
+    <div class="card" style="margin-bottom:1rem;color:var(--danger)">{{ err }}</div>
+  }
+}
+
+<div class="card table-wrap">
+  @if (list.loading$ | async) {
+    <div class="empty">Loading…</div>
+  } @else {
+    <table class="data">
+      <thead>
+        <tr><th>Date</th><th>Employee</th><th>In</th><th>Out</th><th>Hours</th><th>Remarks</th><th></th></tr>
+      </thead>
+      <tbody>
+        @for (item of (list.items$ | async) ?? []; track item.id) {
+          <tr>
+            <td>{{ item.workDate }}</td>
+            <td>{{ item.employeeName }}</td>
+            <td>{{ item.timeIn }}</td>
+            <td>{{ item.timeOut }}</td>
+            <td>{{ item.hoursWorked }}</td>
+            <td>{{ item.remarks || '—' }}</td>
+            <td class="actions">
+              <button class="btn btn-secondary btn-sm" type="button" (click)="openEdit(item)">Edit</button>
+              <button class="btn btn-danger btn-sm" type="button" (click)="remove(item)">Delete</button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    @if (((list.items$ | async) ?? []).length === 0) {
+      <div class="empty">No DTR records yet.</div>
+    }
+  }
+</div>
+
+@if (showModal) {
+  <div class="modal-backdrop" (click)="showModal = false">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <h2>{{ editing ? 'Edit' : 'Encode' }} DTR</h2>
+      <div class="form-grid">
+        <label class="field">Employee
+          <select [(ngModel)]="form.employeeId" [disabled]="!!editing">
+            @for (e of employees; track e.id) { <option [ngValue]="e.id">{{ e.fullName }}</option> }
+          </select>
+        </label>
+        <label class="field">Work Date<input type="date" [(ngModel)]="form.workDate" /></label>
+        <label class="field">Time In<input type="time" [(ngModel)]="form.timeIn" /></label>
+        <label class="field">Time Out<input type="time" [(ngModel)]="form.timeOut" /></label>
+        <label class="field full">Remarks<textarea [(ngModel)]="form.remarks" rows="2"></textarea></label>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" type="button" (click)="showModal = false">Cancel</button>
+        <button class="btn btn-primary" type="button" (click)="save()">Save</button>
+      </div>
+    </div>
+  </div>
+}

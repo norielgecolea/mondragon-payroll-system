@@ -1,0 +1,77 @@
+<div class="page-header no-print">
+  <div>
+    <h1>Payroll Archives</h1>
+    <p>Historical snapshots of finalized payrolls for reprinting and audit.</p>
+  </div>
+</div>
+
+@if (list.error$ | async; as err) {
+  @if (err) {
+    <div class="card no-print" style="margin-bottom:1rem;color:var(--danger)">{{ err }}</div>
+  }
+}
+
+<div class="card table-wrap no-print">
+  @if (list.loading$ | async) {
+    <div class="empty">Loading…</div>
+  } @else {
+    <table class="data">
+      <thead>
+        <tr><th>Number</th><th>Period</th><th>Archived</th><th></th></tr>
+      </thead>
+      <tbody>
+        @for (item of (list.items$ | async) ?? []; track item.id) {
+          <tr>
+            <td>{{ item.payrollNumber }}</td>
+            <td>{{ item.periodStart }} → {{ item.periodEnd }}</td>
+            <td>{{ item.archivedAt | date:'medium' }}</td>
+            <td>
+              <button class="btn btn-secondary btn-sm" type="button" (click)="open(item)">Open</button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    @if (((list.items$ | async) ?? []).length === 0) {
+      <div class="empty">No archived payrolls yet.</div>
+    }
+  }
+</div>
+
+@if (snapshot$ | async; as snap) {
+  <div class="card" style="margin-top:1rem">
+    <div class="page-header">
+      <div>
+        <h2 style="font-size:1.35rem">{{ snap.payrollNumber }}</h2>
+        <p>{{ snap.periodStart }} to {{ snap.periodEnd }}</p>
+      </div>
+      <button class="btn btn-primary btn-sm no-print" type="button" (click)="print()">Download Payslips PDF</button>
+    </div>
+    <p>
+      Gross <strong class="money">{{ snap.totalGross | currency:'PHP':'symbol-narrow':'1.2-2' }}</strong>
+      · Net <strong class="money">{{ snap.totalNet | currency:'PHP':'symbol-narrow':'1.2-2' }}</strong>
+    </p>
+    <div class="table-wrap">
+      <table class="data">
+        <thead>
+          <tr><th>Employee</th><th>Basic</th><th>OT</th><th>Bonus</th><th>CA</th><th>Savings</th><th>SSS</th><th>PhilHealth</th><th>Net</th></tr>
+        </thead>
+        <tbody>
+          @for (item of snap.items || []; track item.id) {
+            <tr>
+              <td>{{ item.employeeName }}</td>
+              <td class="money">{{ item.basicPay | currency:'PHP':'symbol-narrow':'1.2-2' }}</td>
+              <td class="money">{{ item.overtimePay | currency:'PHP':'symbol-narrow':'1.2-2' }}</td>
+              <td class="money">{{ item.bonus | currency:'PHP':'symbol-narrow':'1.2-2' }}</td>
+              <td class="money">{{ item.cashAdvanceDeduction | currency:'PHP':'symbol-narrow':'1.2-2' }}</td>
+              <td class="money">{{ item.savingsDeduction | currency:'PHP':'symbol-narrow':'1.2-2' }}</td>
+              <td class="money">{{ item.sssDeduction | currency:'PHP':'symbol-narrow':'1.2-2' }}</td>
+              <td class="money">{{ item.philhealthDeduction | currency:'PHP':'symbol-narrow':'1.2-2' }}</td>
+              <td class="money">{{ item.netPay | currency:'PHP':'symbol-narrow':'1.2-2' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+}

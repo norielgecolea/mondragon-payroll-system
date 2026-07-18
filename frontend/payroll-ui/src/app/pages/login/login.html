@@ -1,0 +1,36 @@
+<div class="login-page">
+  <section class="hero-panel">
+    <div class="hero-content">
+      <img class="hero-logo" src="/logo.png" alt="Mondragon Food Products" />
+      <p class="eyebrow">Mondragon Food Products</p>
+      <h1>Payroll System</h1>
+      <p class="lead">Manage employees, attendance, advances, savings, and payroll from one admin console.</p>
+    </div>
+  </section>
+
+  <section class="form-panel">
+    <form class="login-card" (ngSubmit)="submit()" autocomplete="off">
+      <img class="card-logo" src="/logo.png" alt="Mondragon Food Products" />
+      <h2>Admin Sign In</h2>
+      <p class="sub">Single administrator access</p>
+
+      <label class="field">
+        Username
+        <input [(ngModel)]="username" name="username" required autocomplete="off" />
+      </label>
+
+      <label class="field">
+        Password
+        <input [(ngModel)]="password" name="password" type="password" required autocomplete="new-password" />
+      </label>
+
+      @if (error) {
+        <div class="error">{{ error }}</div>
+      }
+
+      <button class="btn btn-primary" type="submit" [disabled]="loading">
+        {{ loading ? 'Signing in…' : 'Sign in' }}
+      </button>
+    </form>
+  </section>
+</div>

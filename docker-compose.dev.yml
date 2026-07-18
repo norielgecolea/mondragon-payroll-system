@@ -1,0 +1,73 @@
+# Local development — Angular + Spring Boot + Postgres + nginx proxy
+services:
+  postgres:
+    image: postgres:17
+    container_name: payroll-postgres-dev
+    environment:
+      POSTGRES_USER: payroll
+      POSTGRES_PASSWORD: payroll123
+      POSTGRES_DB: payroll_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data/postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U payroll -d payroll_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./mondragon-payroll-system
+      dockerfile: Dockerfile
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/payroll_db
+      SPRING_DATASOURCE_USERNAME: payroll
+      SPRING_DATASOURCE_PASSWORD: payroll123
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: admin123
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  frontend-dev:
+    image: node:24-alpine
+    working_dir: /app
+    volumes:
+      - ./frontend/payroll-ui:/app
+      - frontend_node_modules:/app/node_modules
+    ports:
+      - "4200:4200"
+    environment:
+      BACKEND_URL: http://backend:8080
+    command: sh -c "npm install && npx ng serve --host 0.0.0.0 --port 4200 --proxy-config proxy.conf.js"
+    depends_on:
+      - backend
+
+  nginx:
+    image: nginx:1.27-alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/dev.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - frontend-dev
+      - backend
+
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    restart: unless-stopped
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    volumes:
+      - ./data/cloudflared:/etc/cloudflared
+    depends_on:
+      - nginx
+
+      
+volumes:
+  frontend_node_modules:

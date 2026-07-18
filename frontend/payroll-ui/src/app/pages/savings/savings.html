@@ -1,0 +1,88 @@
+<div class="page-header">
+  <div>
+    <h1>Savings Accounts</h1>
+    <p>Company-held savings that can be deducted and credited during payroll.</p>
+  </div>
+</div>
+
+@if (list.error$ | async; as err) {
+  @if (err) {
+    <div class="card" style="margin-bottom:1rem;color:var(--danger)">{{ err }}</div>
+  }
+}
+
+<div class="card table-wrap">
+  @if (list.loading$ | async) {
+    <div class="empty">Loading…</div>
+  } @else {
+    <table class="data">
+      <thead>
+        <tr><th>Code</th><th>Employee</th><th>Balance</th><th></th></tr>
+      </thead>
+      <tbody>
+        @for (item of (list.items$ | async) ?? []; track item.id) {
+          <tr>
+            <td>{{ item.employeeCode }}</td>
+            <td>{{ item.employeeName }}</td>
+            <td class="money">{{ item.balance | currency:'PHP':'symbol-narrow':'1.2-2' }}</td>
+            <td>
+              <button class="btn btn-secondary btn-sm" type="button" (click)="open(item)">View</button>
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    @if (((list.items$ | async) ?? []).length === 0) {
+      <div class="empty">No savings accounts yet. Create employees to auto-open accounts.</div>
+    }
+  }
+</div>
+
+@if (selected$ | async; as sel) {
+  <div class="card" style="margin-top:1rem">
+    <div class="page-header" style="margin-bottom:1rem">
+      <div>
+        <h2 style="font-size:1.3rem">{{ sel.employeeName }}</h2>
+        <p>Balance: <strong class="money">{{ sel.balance | currency:'PHP':'symbol-narrow':'1.2-2' }}</strong></p>
+      </div>
+      <div class="actions">
+        <button class="btn btn-primary btn-sm" type="button" (click)="openTx('deposit')">Deposit</button>
+        <button class="btn btn-secondary btn-sm" type="button" (click)="openTx('withdraw')">Withdraw</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="data">
+        <thead>
+          <tr><th>Date</th><th>Type</th><th>Amount</th><th>Balance After</th><th>Remarks</th></tr>
+        </thead>
+        <tbody>
+          @for (tx of sel.transactions || []; track tx.id) {
+            <tr>
+              <td>{{ tx.createdAt | date:'medium' }}</td>
+              <td>{{ tx.type }}</td>
+              <td class="money">{{ tx.amount | currency:'PHP':'symbol-narrow':'1.2-2' }}</td>
+              <td class="money">{{ tx.balanceAfter | currency:'PHP':'symbol-narrow':'1.2-2' }}</td>
+              <td>{{ tx.remarks || '—' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+}
+
+@if (showModal) {
+  <div class="modal-backdrop" (click)="showModal = false">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <h2>{{ mode === 'deposit' ? 'Deposit' : 'Withdraw' }}</h2>
+      <div class="form-grid">
+        <label class="field">Amount<input type="number" step="0.01" [(ngModel)]="amount" /></label>
+        <label class="field full">Remarks<textarea [(ngModel)]="remarks" rows="2"></textarea></label>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" type="button" (click)="showModal = false">Cancel</button>
+        <button class="btn btn-primary" type="button" (click)="saveTx()">Save</button>
+      </div>
+    </div>
+  </div>
+}

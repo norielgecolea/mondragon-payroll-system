@@ -1,0 +1,74 @@
+<div class="page-header">
+  <div>
+    <h1>Cash Advances</h1>
+    <p>Encode advances and optionally deduct them during payroll generation.</p>
+  </div>
+  <button class="btn btn-primary" type="button" (click)="openCreate()">Encode Advance</button>
+</div>
+
+@if (list.error$ | async; as err) {
+  @if (err) {
+    <div class="card" style="margin-bottom:1rem;color:var(--danger)">{{ err }}</div>
+  }
+}
+
+<div class="card table-wrap">
+  @if (list.loading$ | async) {
+    <div class="empty">Loading…</div>
+  } @else {
+    <table class="data">
+      <thead>
+        <tr><th>Date</th><th>Employee</th><th>Amount</th><th>Remaining</th><th>Status</th><th>Remarks</th><th></th></tr>
+      </thead>
+      <tbody>
+        @for (item of (list.items$ | async) ?? []; track item.id) {
+          <tr>
+            <td>{{ item.advanceDate }}</td>
+            <td>{{ item.employeeName }}</td>
+            <td class="money">{{ item.amount | currency:'PHP':'symbol-narrow':'1.2-2' }}</td>
+            <td class="money">{{ item.remainingBalance | currency:'PHP':'symbol-narrow':'1.2-2' }}</td>
+            <td>
+              <span class="badge"
+                [class.badge-success]="item.status === 'FULLY_PAID'"
+                [class.badge-warning]="item.status === 'ACTIVE'"
+                [class.badge-danger]="item.status === 'CANCELLED'">
+                {{ item.status }}
+              </span>
+            </td>
+            <td>{{ item.remarks || '—' }}</td>
+            <td class="actions">
+              @if (item.status === 'ACTIVE') {
+                <button class="btn btn-danger btn-sm" type="button" (click)="cancel(item)">Cancel</button>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    @if (((list.items$ | async) ?? []).length === 0) {
+      <div class="empty">No cash advances yet.</div>
+    }
+  }
+</div>
+
+@if (showModal) {
+  <div class="modal-backdrop" (click)="showModal = false">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <h2>Encode Cash Advance</h2>
+      <div class="form-grid">
+        <label class="field">Employee
+          <select [(ngModel)]="form.employeeId">
+            @for (e of employees; track e.id) { <option [ngValue]="e.id">{{ e.fullName }}</option> }
+          </select>
+        </label>
+        <label class="field">Date<input type="date" [(ngModel)]="form.advanceDate" /></label>
+        <label class="field">Amount<input type="number" step="0.01" [(ngModel)]="form.amount" /></label>
+        <label class="field full">Remarks<textarea [(ngModel)]="form.remarks" rows="2"></textarea></label>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" type="button" (click)="showModal = false">Cancel</button>
+        <button class="btn btn-primary" type="button" (click)="save()">Save</button>
+      </div>
+    </div>
+  </div>
+}

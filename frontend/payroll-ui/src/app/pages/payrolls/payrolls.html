@@ -1,0 +1,194 @@
+<div class="page-header no-print">
+  <div>
+    <h1>Payroll</h1>
+    <p>Generate, review, finalize, print, and archive payroll runs. Regular hours follow schedule limits (no early-in / late-out) minus 1hr unpaid lunch; only approved OT is paid.</p>
+  </div>
+  <button class="btn btn-primary" type="button" (click)="openGenerate()">Generate Payroll</button>
+</div>
+
+@if (list.error$ | async; as err) {
+  @if (err) {
+    <div class="card no-print" style="margin-bottom:1rem;color:var(--danger)">{{ err }}</div>
+  }
+}
+
+<div class="layout">
+  <div class="card table-wrap no-print">
+    @if (list.loading$ | async) {
+      <div class="empty">Loading…</div>
+    } @else {
+      <table class="data">
+        <thead>
+          <tr><th>Number</th><th>Period</th><th>Net</th><th>Status</th><th></th></tr>
+        </thead>
+        <tbody>
+          @for (p of (list.items$ | async) ?? []; track p.id) {
+            <tr>
+              <td>{{ p.payrollNumber }}</td>
+              <td>{{ p.periodStart }} → {{ p.periodEnd }}</td>
+              <td class="money">{{ p.totalNet | currency:'PHP':'symbol-narrow':'1.2-2' }}</td>
+              <td>
+                <span class="badge"
+                  [class.badge-warning]="p.status === 'DRAFT'"
+                  [class.badge-success]="p.status === 'FINALIZED'"
+                  [class.badge-info]="p.status === 'ARCHIVED'">
+                  {{ p.status }}
+                </span>
+              </td>
+              <td class="actions">
+                <button class="btn btn-secondary btn-sm" type="button" (click)="view(p.id)">Open</button>
+                @if (p.status === 'DRAFT') {
+                  <button class="btn btn-danger btn-sm" type="button" (click)="remove(p)">Delete</button>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      @if (((list.items$ | async) ?? []).length === 0) {
+        <div class="empty">No payrolls yet.</div>
+      }
+    }
+  </div>
+
+  @if (selected$ | async; as sel) {
+    <div class="card print-area">
+      <div class="print-head">
+        <div>
+          <h2>Mondragon Food Products</h2>
+          <p>Payroll Slip — {{ sel.payrollNumber }}</p>
+          <p>Period: {{ sel.periodStart }} to {{ sel.periodEnd }}</p>
+          <p>Generated: {{ sel.generatedAt | date:'medium' }}</p>
+        </div>
+        <div class="no-print actions">
+          <button class="btn btn-secondary btn-sm" type="button" (click)="print()">Download Payslips PDF</button>
+          <button class="btn btn-secondary btn-sm" type="button" (click)="exportExcel()">Export Excel</button>
+          @if (sel.status === 'DRAFT') {
+            <button class="btn btn-primary btn-sm" type="button" (click)="finalize()">Finalize</button>
+          }
+          @if (sel.status === 'FINALIZED') {
+            <button class="btn btn-primary btn-sm" type="button" (click)="archive()">Archive</button>
+          }
+          <a class="btn btn-ghost btn-sm" routerLink="/archives">Archives</a>
+        </div>
+      </div>
+
+      <div class="totals">
+        <div><span>Gross</span><strong class="money">{{ sel.totalGross | currency:'PHP':'symbol-narrow':'1.2-2' }}</strong></div>
+        <div><span>Deductions</span><strong class="money">{{ sel.totalDeductions | currency:'PHP':'symbol-narrow':'1.2-2' }}</strong></div>
+        <div><span>Net Pay</span><strong class="money">{{ sel.totalNet | currency:'PHP':'symbol-narrow':'1.2-2' }}</strong></div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="data">
+          <thead>
+            <tr>
+              <th>Employee</th><th>Days</th><th>OT Hrs</th><th>Basic</th><th>OT Pay</th><th>Bonus</th>
+              <th>CA</th><th>Savings</th><th>SSS</th><th>PhilHealth</th><th>Net</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (item of sel.items || []; track item.id) {
+              <tr>
+                <td>{{ item.employeeName }}</td>
+                <td>{{ item.daysWorked }}</td>
+                <td>{{ item.otHours }}</td>
+                <td class="money">{{ item.basicPay | currency:'PHP':'symbol-narrow':'1.2-2' }}</td>
+                <td class="money">{{ item.overtimePay | currency:'PHP':'symbol-narrow':'1.2-2' }}</td>
+                <td class="money">{{ item.bonus | currency:'PHP':'symbol-narrow':'1.2-2' }}</td>
+                <td class="money">{{ item.cashAdvanceDeduction | currency:'PHP':'symbol-narrow':'1.2-2' }}</td>
+                <td class="money">{{ item.savingsDeduction | currency:'PHP':'symbol-narrow':'1.2-2' }}</td>
+                <td class="money">{{ item.sssDeduction | currency:'PHP':'symbol-narrow':'1.2-2' }}</td>
+                <td class="money">{{ item.philhealthDeduction | currency:'PHP':'symbol-narrow':'1.2-2' }}</td>
+                <td class="money">{{ item.netPay | currency:'PHP':'symbol-narrow':'1.2-2' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  }
+</div>
+
+@if (showGenerate) {
+  <div class="modal-backdrop no-print" (click)="showGenerate = false">
+    <div class="modal generate-modal" (click)="$event.stopPropagation()">
+      <h2>Generate Payroll</h2>
+
+      <div class="period-row">
+        <label class="field">Period Start<input type="date" [(ngModel)]="periodStart" /></label>
+        <label class="field">Period End<input type="date" [(ngModel)]="periodEnd" /></label>
+      </div>
+      <label class="field">Remarks<textarea [(ngModel)]="remarks" rows="2"></textarea></label>
+
+      <h3 class="section-title">Per-employee bonus &amp; deductions</h3>
+      <p class="section-hint">Leave amounts blank or unchecked to skip. Net pay cannot go below zero.</p>
+
+      <div class="employee-deduction-list">
+        @for (e of employees; track e.id) {
+          <div class="employee-card">
+            <div class="employee-card-head">
+              <strong>{{ e.fullName }}</strong>
+              <span>{{ e.employeeCode }}</span>
+            </div>
+
+            <div class="deduction-grid">
+              <label class="field">
+                Bonus
+                <input type="number" step="0.01" min="0" [(ngModel)]="deductions[e.id].bonusAmount"
+                  placeholder="0.00" />
+              </label>
+
+              <div class="deduction-block">
+                <label class="check-line">
+                  <input type="checkbox" [(ngModel)]="deductions[e.id].deductCashAdvance"
+                    [disabled]="!advanceFor(e.id)" />
+                  Cash advance
+                </label>
+                @if (advanceFor(e.id); as adv) {
+                  <small class="bal">Balance ₱{{ adv.remainingBalance }}</small>
+                } @else {
+                  <small class="bal muted">No active CA</small>
+                }
+                <input type="number" step="0.01" min="0" [(ngModel)]="deductions[e.id].cashAdvanceAmount"
+                  [disabled]="!deductions[e.id].deductCashAdvance" placeholder="Amount" />
+              </div>
+
+              <div class="deduction-block">
+                <label class="check-line">
+                  <input type="checkbox" [(ngModel)]="deductions[e.id].deductSavings" />
+                  Savings
+                </label>
+                <input type="number" step="0.01" min="0" [(ngModel)]="deductions[e.id].savingsAmount"
+                  [disabled]="!deductions[e.id].deductSavings" placeholder="Amount" />
+              </div>
+
+              <div class="deduction-block">
+                <label class="check-line">
+                  <input type="checkbox" [(ngModel)]="deductions[e.id].deductSss" />
+                  SSS
+                </label>
+                <input type="number" step="0.01" min="0" [(ngModel)]="deductions[e.id].sssAmount"
+                  [disabled]="!deductions[e.id].deductSss" placeholder="Amount" />
+              </div>
+
+              <div class="deduction-block">
+                <label class="check-line">
+                  <input type="checkbox" [(ngModel)]="deductions[e.id].deductPhilhealth" />
+                  PhilHealth
+                </label>
+                <input type="number" step="0.01" min="0" [(ngModel)]="deductions[e.id].philhealthAmount"
+                  [disabled]="!deductions[e.id].deductPhilhealth" placeholder="Amount" />
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+
+      <div class="modal-actions sticky-actions">
+        <button class="btn btn-secondary" type="button" (click)="showGenerate = false">Cancel</button>
+        <button class="btn btn-primary" type="button" (click)="generate()">Generate</button>
+      </div>
+    </div>
+  </div>
+}

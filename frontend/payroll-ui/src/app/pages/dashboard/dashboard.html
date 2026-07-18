@@ -1,0 +1,69 @@
+<div class="page-header">
+  <div>
+    <h1>Dashboard</h1>
+    <p>Overview of workforce, advances, savings, and payroll activity.</p>
+  </div>
+  <a class="btn btn-primary" routerLink="/payrolls">Generate Payroll</a>
+</div>
+
+@if (error$ | async; as err) {
+  @if (err) {
+    <div class="card" style="margin-bottom:1rem;color:var(--danger)">{{ err }}</div>
+  }
+}
+
+@if (data$ | async; as d) {
+  <section class="stats">
+    <article class="stat accent">
+      <span>Active Employees</span>
+      <strong>{{ d.activeEmployees }}</strong>
+      <small>{{ d.totalEmployees }} total records</small>
+    </article>
+    <article class="stat">
+      <span>Positions</span>
+      <strong>{{ d.totalPositions }}</strong>
+      <small>Configured roles</small>
+    </article>
+    <article class="stat">
+      <span>Pending OT</span>
+      <strong>{{ d.pendingOvertime }}</strong>
+      <small>Awaiting approval</small>
+    </article>
+    <article class="stat">
+      <span>Active Advances</span>
+      <strong>{{ d.activeCashAdvances }}</strong>
+      <small>{{ d.totalCashAdvanceBalance | currency:'PHP':'symbol-narrow':'1.2-2' }} outstanding</small>
+    </article>
+  </section>
+
+  <section class="panels">
+    <article class="card panel">
+      <h2>Company Savings</h2>
+      <p class="big money">{{ d.totalSavingsBalance | currency:'PHP':'symbol-narrow':'1.2-2' }}</p>
+      <p class="hint">Total employee savings held in-company</p>
+      <a class="btn btn-secondary btn-sm" routerLink="/savings">View accounts</a>
+    </article>
+
+    <article class="card panel">
+      <h2>Latest Payroll</h2>
+      <p class="big money">{{ d.latestPayrollNet | currency:'PHP':'symbol-narrow':'1.2-2' }}</p>
+      <p class="hint">{{ d.latestPayrollNumber || 'No finalized payroll yet' }}</p>
+      <div class="chip-row">
+        <span class="badge badge-warning">Draft {{ d.draftPayrolls }}</span>
+        <span class="badge badge-success">Final {{ d.finalizedPayrolls }}</span>
+        <span class="badge badge-info">Archive {{ d.archivedPayrolls }}</span>
+      </div>
+    </article>
+
+    <article class="card panel shortcuts">
+      <h2>Quick Actions</h2>
+      <div class="links">
+        <a routerLink="/employees">Manage employees</a>
+        <a routerLink="/dtr">Encode DTR</a>
+        <a routerLink="/overtime">Review overtime</a>
+        <a routerLink="/cash-advances">Record cash advance</a>
+        <a routerLink="/archives">Open archives</a>
+      </div>
+    </article>
+  </section>
+}

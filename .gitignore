@@ -1,0 +1,9 @@
+data/
+.DS_Store
+.metadata/
+.env
+*.log
+frontend/payroll-ui/node_modules/
+frontend/payroll-ui/dist/
+frontend/payroll-ui/.angular/
+mondragon-payroll-system/target/

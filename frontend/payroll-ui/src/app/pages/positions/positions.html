@@ -1,0 +1,65 @@
+<div class="page-header">
+  <div>
+    <h1>Positions</h1>
+    <p>Define job titles used across the workforce.</p>
+  </div>
+  <button class="btn btn-primary" type="button" (click)="openCreate()">Add Position</button>
+</div>
+
+@if (list.error$ | async; as err) {
+  @if (err) {
+    <div class="card" style="margin-bottom:1rem;color:var(--danger)">{{ err }}</div>
+  }
+}
+
+<div class="card table-wrap">
+  @if (list.loading$ | async) {
+    <div class="empty">Loading…</div>
+  } @else {
+    <table class="data">
+      <thead>
+        <tr><th>Title</th><th>Description</th><th>Status</th><th></th></tr>
+      </thead>
+      <tbody>
+        @for (item of (list.items$ | async) ?? []; track item.id) {
+          <tr>
+            <td>{{ item.title }}</td>
+            <td>{{ item.description || '—' }}</td>
+            <td>
+              <span class="badge" [class.badge-success]="item.active" [class.badge-danger]="!item.active">
+                {{ item.active ? 'Active' : 'Inactive' }}
+              </span>
+            </td>
+            <td class="actions">
+              <button class="btn btn-secondary btn-sm" type="button" (click)="openEdit(item)">Edit</button>
+              @if (item.active) {
+                <button class="btn btn-danger btn-sm" type="button" (click)="remove(item)">Deactivate</button>
+              } @else {
+                <button class="btn btn-primary btn-sm" type="button" (click)="activate(item)">Activate</button>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+    @if (((list.items$ | async) ?? []).length === 0) {
+      <div class="empty">No positions yet.</div>
+    }
+  }
+</div>
+
+@if (showModal) {
+  <div class="modal-backdrop" (click)="showModal = false">
+    <div class="modal" (click)="$event.stopPropagation()">
+      <h2>{{ editing ? 'Edit' : 'Add' }} Position</h2>
+      <div class="form-grid">
+        <label class="field full">Title<input [(ngModel)]="form.title" required /></label>
+        <label class="field full">Description<textarea [(ngModel)]="form.description" rows="3"></textarea></label>
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" type="button" (click)="showModal = false">Cancel</button>
+        <button class="btn btn-primary" type="button" (click)="save()">Save</button>
+      </div>
+    </div>
+  </div>
+}

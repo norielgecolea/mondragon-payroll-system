@@ -1,0 +1,339 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&display=swap');
+
+:root {
+  --bg: #f3f6f2;
+  --bg-deep: #e8efe6;
+  --surface: #ffffff;
+  --surface-2: #f7faf6;
+  --ink: #14201a;
+  --ink-soft: #4a5c52;
+  --muted: #7a8b81;
+  --line: #d5e0d8;
+  --brand: #1f6b4a;
+  --brand-dark: #154c35;
+  --brand-soft: #d8eee3;
+  --accent: #c45c26;
+  --accent-soft: #f8e8de;
+  --success: #2d8a5a;
+  --warning: #c4891a;
+  --danger: #c23b3b;
+  --shadow: 0 10px 30px rgba(20, 32, 26, 0.06);
+  --radius: 16px;
+  --sidebar: 260px;
+  --font: 'Outfit', sans-serif;
+  --display: 'Source Serif 4', Georgia, serif;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  font-family: var(--font);
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 0% 0%, rgba(31, 107, 74, 0.08), transparent 40%),
+    radial-gradient(circle at 100% 0%, rgba(196, 92, 38, 0.06), transparent 35%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--display);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.page-header h1 {
+  font-size: 1.85rem;
+  color: var(--ink);
+}
+
+.page-header p {
+  margin: 0.35rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.25rem;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  border: none;
+  border-radius: 12px;
+  padding: 0.7rem 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn:hover {
+  transform: translateY(-1px);
+}
+
+.btn-primary {
+  background: var(--brand);
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(31, 107, 74, 0.25);
+}
+
+.btn-primary:hover {
+  background: var(--brand-dark);
+}
+
+.btn-secondary {
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+}
+
+.btn-danger {
+  background: #fdecec;
+  color: var(--danger);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--brand);
+}
+
+.btn-sm {
+  padding: 0.45rem 0.8rem;
+  font-size: 0.85rem;
+  border-radius: 10px;
+}
+
+.table-wrap {
+  overflow: auto;
+}
+
+table.data {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+table.data th,
+table.data td {
+  padding: 0.85rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+  vertical-align: top;
+}
+
+table.data th {
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+table.data tr:hover td {
+  background: var(--surface-2);
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.form-grid .full {
+  grid-column: 1 / -1;
+}
+
+label.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+label.field input,
+label.field select,
+label.field textarea {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.7rem 0.85rem;
+  background: #fff;
+  color: var(--ink);
+}
+
+label.field input:focus,
+label.field select:focus,
+label.field textarea:focus {
+  outline: 2px solid rgba(31, 107, 74, 0.25);
+  border-color: var(--brand);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge-success {
+  background: #e4f5ec;
+  color: var(--success);
+}
+
+.badge-warning {
+  background: #fff3db;
+  color: var(--warning);
+}
+
+.badge-danger {
+  background: #fdecec;
+  color: var(--danger);
+}
+
+.badge-info {
+  background: var(--brand-soft);
+  color: var(--brand-dark);
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 32, 26, 0.45);
+  display: grid;
+  place-items: center;
+  z-index: 1000;
+  padding: 0.75rem;
+  animation: fadeIn 0.2s ease;
+}
+
+.modal {
+  width: min(640px, 100%);
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 1.5rem;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.18);
+  animation: riseIn 0.25s ease;
+}
+
+.modal.wide {
+  width: min(960px, 100%);
+}
+
+.modal h2 {
+  margin-bottom: 1rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 1.25rem;
+}
+
+.empty {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: var(--muted);
+}
+
+.actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+/* Keep table-cell so vertical-align works on tall rows (e.g. schedule days). */
+td.actions {
+  display: table-cell;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+td.actions .btn {
+  display: inline-flex;
+  margin: 0 0.35rem 0 0;
+  vertical-align: middle;
+}
+
+td.actions .btn:last-child {
+  margin-right: 0;
+}
+
+.money {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 900px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .page-header {
+    flex-direction: column;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+  }
+}

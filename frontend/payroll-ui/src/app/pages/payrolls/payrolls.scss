@@ -1,0 +1,164 @@
+.layout {
+  display: grid;
+  gap: 1rem;
+}
+
+.print-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.print-head h2 {
+  font-size: 1.4rem;
+}
+
+.print-head p {
+  margin: 0.2rem 0;
+  color: var(--ink-soft);
+}
+
+.totals {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.totals > div {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 0.85rem 1rem;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.totals span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.generate-modal {
+  width: min(1100px, 96vw);
+  max-height: calc(100vh - 1.25rem);
+  display: flex;
+  flex-direction: column;
+}
+
+.period-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+
+.section-title {
+  margin: 1.1rem 0 0.25rem;
+  font-size: 1rem;
+}
+
+.section-hint {
+  margin: 0 0 0.85rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.employee-deduction-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+  overflow: auto;
+  padding-right: 0.15rem;
+  flex: 1;
+  min-height: 0;
+  max-height: none;
+}
+
+.employee-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-2);
+  padding: 0.85rem 1rem;
+}
+
+.employee-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.employee-card-head span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.deduction-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.deduction-block {
+  display: grid;
+  gap: 0.35rem;
+  align-content: start;
+}
+
+.check-line {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.bal {
+  font-size: 0.75rem;
+  color: var(--brand-dark);
+}
+
+.bal.muted {
+  color: var(--muted);
+}
+
+.deduction-block input[type='number'],
+.deduction-grid .field input {
+  width: 100%;
+}
+
+.sticky-actions {
+  position: sticky;
+  bottom: 0;
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  background: linear-gradient(to top, var(--surface) 70%, transparent);
+}
+
+@media (max-width: 900px) {
+  .employee-deduction-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .period-row,
+  .deduction-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media print {
+  .layout > .card:first-child {
+    display: none;
+  }
+
+  .print-area {
+    box-shadow: none;
+    border: none;
+  }
+}

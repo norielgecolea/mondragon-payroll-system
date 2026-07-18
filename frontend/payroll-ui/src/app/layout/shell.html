@@ -1,0 +1,88 @@
+<div class="shell">
+  <aside class="sidebar" [class.open]="navOpen">
+    <div class="brand">
+      <img class="logo" src="/logo.png" alt="Mondragon Food Products" />
+      <div>
+        <strong>Mondragon</strong>
+        <span>Payroll System</span>
+      </div>
+    </div>
+
+    <nav>
+      @for (link of links; track link.path) {
+        <a [routerLink]="link.path" routerLinkActive="active" (click)="navOpen = false">
+          <span class="ico">{{ link.icon }}</span>
+          {{ link.label }}
+        </a>
+      }
+    </nav>
+
+    <div class="sidebar-foot">
+      <button class="user" type="button" (click)="openAccount()" title="Manage account">
+        <div class="avatar">{{ (auth.username() || 'A').charAt(0).toUpperCase() }}</div>
+        <div>
+          <strong>{{ auth.username() }}</strong>
+          <span>Tap to manage account</span>
+        </div>
+      </button>
+      <button class="btn btn-secondary btn-sm" type="button" (click)="logout()">Sign out</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar no-print">
+      <button class="menu-btn" type="button" (click)="navOpen = !navOpen">☰</button>
+      <div class="top-title">Mondragon Food Products</div>
+      <div class="top-meta">Admin Console</div>
+    </header>
+    <main class="content">
+      <router-outlet />
+    </main>
+  </div>
+
+  @if (navOpen) {
+    <div class="scrim no-print" (click)="navOpen = false"></div>
+  }
+</div>
+
+@if (accountOpen) {
+  <div class="modal-backdrop no-print" (click)="closeAccount()">
+    <div class="modal account-modal" (click)="$event.stopPropagation()">
+      <h2>Account settings</h2>
+      <p class="account-sub">Update your administrator username and password.</p>
+      <form (ngSubmit)="saveAccount()">
+        <label class="field">
+          Username
+          <input [(ngModel)]="accountUsername" name="accountUsername" required autocomplete="username" />
+        </label>
+        <label class="field">
+          Current password
+          <input [(ngModel)]="currentPassword" name="currentPassword" type="password" required
+            autocomplete="current-password" />
+        </label>
+        <label class="field">
+          New password
+          <input [(ngModel)]="newPassword" name="newPassword" type="password"
+            autocomplete="new-password" placeholder="Leave blank to keep current" />
+        </label>
+        <label class="field">
+          Confirm new password
+          <input [(ngModel)]="confirmPassword" name="confirmPassword" type="password"
+            autocomplete="new-password" />
+        </label>
+        @if (accountError) {
+          <div class="account-msg error">{{ accountError }}</div>
+        }
+        @if (accountMessage) {
+          <div class="account-msg ok">{{ accountMessage }}</div>
+        }
+        <div class="modal-actions">
+          <button class="btn btn-secondary" type="button" (click)="closeAccount()">Cancel</button>
+          <button class="btn btn-primary" type="submit" [disabled]="accountSaving">
+            {{ accountSaving ? 'Saving…' : 'Save changes' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
